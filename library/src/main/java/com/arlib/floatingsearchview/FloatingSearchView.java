@@ -45,6 +45,7 @@ import android.support.v7.view.menu.MenuItemImpl;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
@@ -157,6 +158,7 @@ public class FloatingSearchView extends FrameLayout {
     private View mSearchInputParent;
     private String mOldQuery = "";
     private OnQueryChangeListener mQueryListener;
+    private OnQueryChangeListener mAfterQueryListener;
     private ImageView mLeftAction;
     private OnLeftMenuClickListener mOnMenuClickListener;
     private OnHomeActionClickListener mOnHomeActionClickListener;
@@ -610,28 +612,50 @@ public class FloatingSearchView extends FrameLayout {
 
             public void onTextChanged(final CharSequence s, int start, int before, int count) {
                 //todo investigate why this is called twice when pressing back on the keyboard
+                if (mQueryListener != null) {
+                    if (mSkipTextChangeEvent || !mIsFocused) {
+                        mSkipTextChangeEvent = false;
+                    } else {
+                        if (mSearchInput.getText().toString().length() != 0 &&
+                                mClearButton.getVisibility() == View.INVISIBLE) {
+                            mClearButton.setAlpha(0.0f);
+                            mClearButton.setVisibility(View.VISIBLE);
+                            ViewCompat.animate(mClearButton).alpha(1.0f).setDuration(CLEAR_BTN_FADE_ANIM_DURATION).start();
+                        } else if (mSearchInput.getText().toString().length() == 0) {
+                            mClearButton.setVisibility(View.INVISIBLE);
+                        }
 
-                if (mSkipTextChangeEvent || !mIsFocused) {
-                    mSkipTextChangeEvent = false;
-                } else {
-                    if (mSearchInput.getText().toString().length() != 0 &&
-                            mClearButton.getVisibility() == View.INVISIBLE) {
-                        mClearButton.setAlpha(0.0f);
-                        mClearButton.setVisibility(View.VISIBLE);
-                        ViewCompat.animate(mClearButton).alpha(1.0f).setDuration(CLEAR_BTN_FADE_ANIM_DURATION).start();
-                    } else if (mSearchInput.getText().toString().length() == 0) {
-                        mClearButton.setVisibility(View.INVISIBLE);
+                        if (mQueryListener != null && mIsFocused && !mOldQuery.equals(mSearchInput.getText().toString())) {
+                            mQueryListener.onSearchTextChanged(mOldQuery, mSearchInput.getText().toString());
+                        }
+
                     }
 
-                    if (mQueryListener != null && mIsFocused && !mOldQuery.equals(mSearchInput.getText().toString())) {
-                        mQueryListener.onSearchTextChanged(mOldQuery, mSearchInput.getText().toString());
-                    }
-
+                    mOldQuery = mSearchInput.getText().toString();
                 }
-
-                mOldQuery = mSearchInput.getText().toString();
             }
 
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (mAfterQueryListener != null) {
+                    if (mSkipTextChangeEvent || !mIsFocused) {
+                        mSkipTextChangeEvent = false;
+                    } else {
+                        if (mSearchInput.getText().toString().length() != 0 &&
+                                mClearButton.getVisibility() == View.INVISIBLE) {
+                            mClearButton.setAlpha(0.0f);
+                            mClearButton.setVisibility(View.VISIBLE);
+                            ViewCompat.animate(mClearButton).alpha(1.0f).setDuration(CLEAR_BTN_FADE_ANIM_DURATION).start();
+                        } else if (mSearchInput.getText().toString().length() == 0) {
+                            mClearButton.setVisibility(View.INVISIBLE);
+                        }
+                        if (mAfterQueryListener != null && mIsFocused && !mOldQuery.equals(mSearchInput.getText().toString())) {
+                            mAfterQueryListener.onSearchTextChanged(mOldQuery, mSearchInput.getText().toString());
+                        }
+                    }
+                    mOldQuery = mSearchInput.getText().toString();
+                }
+            }
         });
 
         mSearchInput.setOnFocusChangeListener(new TextView.OnFocusChangeListener() {
@@ -1664,6 +1688,10 @@ public class FloatingSearchView extends FrameLayout {
      */
     public void setOnQueryChangeListener(OnQueryChangeListener listener) {
         this.mQueryListener = listener;
+    }
+
+    public void setOnAfterQueryChangeListener(OnQueryChangeListener listener) {
+        this.mAfterQueryListener = listener;
     }
 
     /**
